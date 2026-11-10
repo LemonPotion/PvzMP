@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The transport and the protocol are compiled straight from the mod's own source files, not from a
+    reference to PvzMP.dll: what these tests prove has to be the same code that ships into the game.
+    net6.0 matches the mod so socket and JSON behaviour are the same BCL semantics.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>PvzMP.NetTests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GameDir>D:\PvzFusion\</GameDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Protocol.cs" Link="mod/Protocol.cs" />
+    <Compile Include="../../Log.cs" Link="mod/Log.cs" />
+    <Compile Include="../../Net/**/*.cs" Link="mod/Net/%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- The session rules are plain C#: the same source files the mod compiles into the game. -->
+    <Compile Include="../../Core/Session/**/*.cs" Link="mod/Core/Session/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only: Log.cs names MelonLogger, and the tests redirect the sink before it is reached. -->
+    <Reference Include="MelonLoader">
+      <HintPath>$(GameDir)MelonLoader\net6\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+</Project>

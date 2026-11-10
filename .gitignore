@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+ref/dump-en/
+ref/eco-src/
+ref/native-index.json
+hex.txt
+out.txt
+out2.txt
+tools/__pycache__/
+tools/re/__pycache__/
