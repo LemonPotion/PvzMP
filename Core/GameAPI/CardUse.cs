@@ -64,6 +64,11 @@ namespace PvzMP.Core.GameAPI
 
             return ApiBase.TryCall("SpendCard(plantedType=" + plantedType + ")", () =>
             {
+                // The card the click carried, not the plant that came out of the cell: a fusion answers
+                // with a kind of its own (type 0 asked, 1030 appeared), and the hand still holds the card
+                // the player clicked. Proof: ref/EVIDENCE.md E74.
+                int spentType = (int)card.thePlantType;
+
                 float cooldown = plantedType == SuperCherryShooter
                     ? card.fullCD - SuperCherryDiscount
                     : 0f;
@@ -85,13 +90,14 @@ namespace PvzMP.Core.GameAPI
                     // the plant down (Mouse.TryToSetPlantByCard +0x7EA). A room placement gets here from
                     // the host's answer instead, so that tail is finished here; a card of another plant
                     // is the player's next pick and stays.
-                    bool stillCarried = ApiBase.Present(held) ? heldCardType == plantedType
-                        : handType == plantedType;
+                    bool stillCarried = ApiBase.Present(held)
+                        ? held.GetInstanceID() == card.GetInstanceID() || heldCardType == spentType
+                        : handType == spentType;
 
                     if (stillCarried)
                     {
                         mouse.ClearItemOnMouse(true);
-                        hand = "carried type " + plantedType + ", cleared";
+                        hand = "carried type " + spentType + ", cleared";
                     }
                     else
                     {

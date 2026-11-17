@@ -1886,7 +1886,7 @@ level**
   `grep -n "EnterLoseMenu" ref/dump-en/dump.cs`;
   live: `grep -n "the lose screen is not opened here\|the host says the lawn has ended" <client log>`.
 
-**E71. The main menu is a pushed UIType, and the coop button reads the mouse itself**
+**E71. The main menu is a pushed UIType and carries the three mode buttons**
 - `UIType.MainMenu = 0` and `UIType.MainMenu_travel = 1` (ref/dump-en/dump.cs:93165-93166).
   `UIMgr.EnterMainMenu` (rva 0x8E2B90) pushes UIType 0 at +0x239 and UIType 1 at +0x293, so the type
   of the stack's top names the screen the player is on - that is what the mod's coop button checks
@@ -1895,16 +1895,17 @@ level**
   `UIPrefabs[type]`, writes the type into `BaseMenu.uIType` (offset 0x38) and adds the instance to the
   stack `List` at [this+0x18]; `Peak`/`Pop`/`PopTo`/`PopAll` walk that same list.
 - `MainMenu` carries `UIButton_mainMenu challengeLevel/izLevel/survivalLevel` (dump.cs:76134-76147); a
-  `UIButton` has `clickEvent` at 0x20 and `rectTransform` at 0x48 (dump.cs:70221-70226). The mod only
-  reads `survivalLevel`'s rectangle to put its own box in the strip under it - it never presses the
-  game's button, so nothing on the main menu is re-entered.
+  `UIButton` has `clickEvent` at 0x20 and `rectTransform` at 0x48 (dump.cs:70221-70226). The mod places
+  its own box at the upper right corner of the upper canvas's rectangle and never presses or reads the
+  game's buttons, so nothing on the main menu is re-entered.
 - The box is the mod's own `GameObject` with an `Image` and a child `TextMeshProUGUI` on
   `GameAPP.canvasUp`, all with `raycastTarget = false`; hit testing is the mod's own -
   `Input.mousePosition` through `RectTransformUtility.RectangleContainsScreenPoint` and
-  `Input.GetMouseButtonDown(0)` (CoopMenu.cs:129-130), the same press read ActionGate uses
-  (Core/GameAPI/ActionGate.cs:177-178). HOST and CLIENT call `ConnectionEntry.HostFromMenu` /
-  `JoinFromMenu`, which enter the same `Open` gate F1 and F2 use, so the button and the hotkeys cannot
-  drift apart.
+  `Input.GetMouseButtonDown(0)` (CoopMenu.cs, `Pump`), the same press read ActionGate uses
+  (Core/GameAPI/ActionGate.cs:177-178). The live run showed `SurvivalLevels` itself has no children
+  and no text, so its caption lives elsewhere in the menu and it cannot be copied as a whole button.
+  HOST and CLIENT call `ConnectionEntry.HostFromMenu` / `JoinFromMenu`, which enter the same `Open`
+  gate F1 and F2 use, so the button and the hotkeys cannot drift apart.
 - Live proof is still pending: no session has run on this build yet.
 - Repro: `cd /d/PvzMP && py -3 tools/re/pvz-disasm.py 'UIMgr$$EnterMainMenu'`;
   `py -3 tools/re/pvz-disasm.py 'UIResourcesLoader$$Push'`;
@@ -1966,3 +1967,39 @@ level**
   `grep -n "override void Die(Plant.DieReason" ref/dump-en/dump.cs`;
   `grep -n "isMindControlled" ref/dump-en/dump.cs`;
   live: `grep -n "a room plant dies on the host's word\|was brought down on this lawn" <peer log>`.
+
+**E74. A fused placement spends the card the player clicked, not the plant that came out**
+- The native click tail (E15/E68) arms the cooldown from the card that was clicked and then clears the
+  held item; a fusion answers with a different `thePlantType` than the card asked for (live: a type 1
+  card on an occupied cell produced 1033, `placement asked for type 1 cell 0,1 cost 50` ->
+  `SpendCard -> CD 0/7.5, hand card type 1, left` -> `SpendCard(plantedType=1033) -> ok`, frame
+  5848-5850). `CardUse.Spend` therefore remembers `spentType = (int)card.thePlantType` before the tail
+  and clears the hand by that type or by the card's own instance id; `plantedType` is still what the
+  SuperCherryShooter discount compares, because that discount looks at the plant that appeared.
+- What the old code did: it compared the held card against `plantedType`, so on a fusion the card
+  stayed in hand while its cooldown ran - the live lines above read `hand card type 1, left` with no
+  `cleared`.
+- Live proof is the run in `26-11-17_16-16-12.log`; the run on the next build must show
+  `SpendCard -> ... carried type N, cleared` on a merge line.
+- Repro: `cd /d/PvzMP && grep -n "SpendCard ->" /d/PvzFusion2/MelonLoader/Logs/26-11-17_16-16-12.log`.
+
+**E75. The ready word is a button under the roster, and it lives exactly as long as the lawn does**
+- The ready line is now a drawn box (UnityEngine.UI.Image + TextMeshProUGUI on `GameAPP.canvasUp`)
+  placed under the lobby list: the roster rows end at `TopMargin + rows*RowHeight` (LobbyHud:
+  anchors (1,1), pivot (1,0.5), RowWidth 320, RowHeight 28, RightMargin 20, TopMargin 8), and the box
+  sits `ListGap` below that in the same 320 px column. A peer presses it to toggle its word through
+  `TellHostIAmReady`; the host's box only reports `Roster.SeatsNotReady() == 0`, because the host's
+  press is the game's own Let's Rock (`LevelSync.TryCaptureLetsRock`, E17b).
+- The old bottom line outlived the lawn: `ChooserIsOpen` asked only `InitBoard.Instance != null &&
+  !ready`, and the live log shows the label built at `UIMgr.EnterGame` (frame 13968,
+  `new GameObject(PvzMP ready)` + `the ready label says 'not ready'`) still up after
+  `UIMgr.EnterMainMenu -> ok frame=14368` and destroyed only when the room ended (frame 15214). The
+  fix asks the same question plus two facts that end with the level: the chooser object is active in
+  the hierarchy and `Entities.Board() != null`. The board is present during the chooser (the host's
+  wave clock is stored on the same lawn at that frame) and gone on the leave path, which is what the
+  live log shows (`ApplyLeave` found `Entities.Board()` already null).
+- Live proof is pending for the new box; the lines to read next time are
+  `the ready button stands under N line(s)` on build, `this seat presses its ready button` on a peer
+  press, and `Destroy(PvzMP ready)` beside `UIMgr.EnterMainMenu`.
+- Repro: `cd /d/PvzMP && grep -n "ready label says\|EnterMainMenu\|Destroy(PvzMP ready)" /d/PvzFusion2/MelonLoader/Logs/26-11-17_16-16-12.log`;
+  `grep -n "RowHeight\|RowWidth\|TopMargin" Core/GameAPI/LobbyHud.cs`.

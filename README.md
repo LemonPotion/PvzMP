@@ -1,87 +1,122 @@
-# PvzMP
+# PvzMP — кооператив для Plants vs Zombies Fusion
 
-Co-op multiplayer for **Plants vs Zombies Fusion** (IL2CPP, `LanPiaoPiao/PlantsVsZombiesRH`).
-Every player has a lawn of their own; the host's lawn is the room's truth for placement, zombies,
-the level and the end of the game.
+Мод, который позволяет играть в Plants vs Zombies Fusion вдвоём (до четырёх человек).
+У каждого игрока своя грядка на экране, но события общие: что поставил один — появляется у всех,
+зомби, солнце, уровень и конец игры одинаковые для всей комнаты.
 
-Status: **0.1** (early). Every end must run the same DLL.
+Главным считается компьютер хоста: его грядка — «правда» комнаты. Если что-то разошлось, побеждает
+то, что видит хост.
 
-## Requirements
+Версия мода: **0.1** (ранняя). У всех игроков должна быть **одинаковая** версия мода, иначе комната
+не соберётся.
 
-- Windows, the game installed
-- MelonLoader 0.7.3 (net6)
-- Same mod version on every end: the handshake refuses a different one
+## Что нужно
 
-## Install
+- Windows 10 или 11, 64-битная.
+- Игра **Plants vs Zombies Fusion 4.1 (English, PC)** — файл `PlantsVsZombiesRH.exe`.
+  Другие версии игры не проверялись: мод может не запуститься или вести себя непредсказуемо.
+- Загрузчик модов **MelonLoader 0.7.3 (Open-Beta)**, вариант **.NET 6 (net6)**.
+  Не .NET Framework и не net35 — игра запускается именно на net6.
+- **Radmin VPN** — бесплатная программа, которая соединяет два компьютера через интернет так,
+  будто они в одной локальной сети. Нужна всем игрокам.
+- Один файл мода `PvzMP.dll` (лежит в папке с игрой, в подпапке `Mods`).
 
-1. Install MelonLoader 0.7.3 for the game.
-2. Copy `PvzMP.dll` into the game's `Mods` folder.
-3. Start the game. Logs are written to `MelonLoader/Logs/`.
+## Установка (на каждом компьютере)
 
-## Play
+1. Установите игру и один раз запустите её, чтобы убедиться, что она работает без мода.
+2. Закройте игру.
+3. Установите MelonLoader 0.7.3:
+   - скачайте установщик MelonLoader 0.7.3 со страницы релизов:
+     <https://github.com/LavaGang/MelonLoader/releases/tag/v0.7.3>;
+   - запустите его, укажите папку с игрой (туда, где лежит `PlantsVsZombiesRH.exe`);
+   - выберите вариант **.NET 6** и установите.
+4. Запустите игру один раз и закройте. В папке игры появится папка `MelonLoader`, а в ней — `Mods`.
+5. Скопируйте `PvzMP.dll` в папку `Mods`.
+   Если папки `Mods` нет — создайте её рядом с `MelonLoader`.
+6. Запустите игру. В главном меню справа сверху должна появиться кнопка **COOP**.
+   Если кнопки нет — откройте `MelonLoader\Logs\` (самый свежий файл `.log`) и проверьте,
+   что MelonLoader установлен как 0.7.3/net6, а `PvzMP.dll` лежит именно в `Mods`.
 
-- **Host**: in the main menu press `COOP` and then `HOST` (or press `F1` before a level starts),
-  type a nickname, confirm. The dialog shows the port, 7777 by default.
-- **Client**: press `COOP` and then `CLIENT` (or `F2`), type the host's address
-  (a LAN address such as `192.168.1.10`) and the same port, confirm.
-- Up to four seats.
-- `Escape` closes the dialog, `F3` leaves the room, `F4` sweeps leftover objects off the local lawn.
-- In the seed chooser the bottom line says `ready` or `not ready`. The host's `Let's Rock` starts
-  the level only when no seat is still waiting, and a peer can press it again to take the word back.
-- Each player picks cards on their own screen. A plant belongs to one seat at a time; the same card
-  on the others is dimmed and carries the holder's name.
-- The slow-mode button is shared: a press on any lawn toggles the room.
+## Как подключиться через Radmin VPN
 
-## What is synchronized
+Radmin VPN даёт каждому компьютеру адрес вида `26.x.x.x` в общей виртуальной сети.
+Эти адреса и используются для соединения — реальные IP-адреса и настройки роутера не нужны.
 
-- Session, roster, nicknames, readiness
-- Level start, pause, slow time, and the end of the game (the host decides)
-- Seed draft, plant placement and layout, glove and cart moves, fusion, fertilizer, hammer, shovel,
-  graves, trophies
-- Plant facts: health and shield through the game's own heal and damage doors, level through its own
-  upgrade, stage and skin, and the counters and switches its behaviour reads; the host's layout
-  corrects a peer every second
-- A room plant dies on the host's word: a peer holds the death until the host's layout stops naming
-  the plant
-- Zombies (the host's list, including which are hypnotized), effects and sounds, the sun bank
+1. Оба игрока устанавливают Radmin VPN: <https://www.radmin-vpn.com/> (бесплатная версия).
+2. Один игрок создаёт сеть: **Создать сеть / Create network**, придумывает имя и пароль
+   и сообщает их второму игроку.
+3. Второй игрок подключается к этой сети: **Присоединиться к сети / Join network**,
+   вводит то же имя и пароль.
+4. В окне Radmin VPN у каждого виден адрес собеседника — `26.x.x.x`.
+   Это и есть адрес, который нужно ввести в игре.
+5. Если Windows спросит про доступ к сети для игры — разрешите (сеть «частная»).
+   Мод открывает один TCP-порт, по умолчанию **7777**.
 
-## Known limitations (0.1)
+## Как начать игру
 
-- Plant status animations (bite, glow, sleep) and their countdowns stay local on purpose: they are
-  one playing animation, and copying them would freeze or duplicate it on the other lawn.
-- Objects a plant creates (sun, projectiles) follow the local lawn; the sun bank itself is shared,
-  so the totals converge.
-- Stacked plants travel as separate layout entries; the overlay (pot, pumpkin, ladder) still looks
-  as each lawn's own game draws it.
-- A plant a peer's own game brings to zero stays up until the host's layout removes it or heals it
-  back. That is the chosen model - the host's word - not a lost frame.
+1. Хост запускает игру первым.
+2. В главном меню хост нажимает **COOP → HOST**, вводит своё имя и подтверждает.
+   Порт по умолчанию — 7777, менять его не нужно.
+3. Клиент запускает игру и нажимает **COOP → CLIENT**, вводит адрес хоста из Radmin VPN
+   (например, `26.225.125.120`), тот же порт 7777 и своё имя.
+4. Когда все подключились, хост выбирает уровень как обычно. Клиент загружает тот же уровень.
+5. На экране выбора растений:
+   - справа сверху — список игроков, под ним кнопка **ready / not ready**.
+     Клиент нажимает её (или кнопку **Let's Rock**), чтобы сказать «готов»;
+     повторное нажатие забирает слово обратно;
+   - хост запускает уровень кнопкой **Let's Rock**, когда все готовы.
+6. Каждый выбирает карточки растений на своём экране. Одно растение может взять только один игрок:
+   у остальных эта карточка затемнена и подписана его именем.
+7. После выхода из уровня в меню кнопка готовности исчезает вместе с уровнем.
 
-## Network
+Горячие клавиши (если кнопки не под рукой):
 
-The room is one TCP port (7777 by default) opened by the host. A firewall or NAT must allow it;
-clients need the host's reachable address. Nicknames and room state are sent only to the seats that
-joined. The mod stores nothing outside the MelonLoader logs.
+- `F1` — создать комнату (хост), `F2` — подключиться (клиент);
+- `F3` — выйти из комнаты;
+- `F4` — убрать с грядки лишние предметы;
+- `Escape` — закрыть диалог подключения.
 
-## Build
+## Что синхронизируется
+
+- Комната, список игроков, имена, готовность.
+- Старт уровня, пауза, замедление времени и конец игры (решает хост).
+- Выбор растений, посадка и расстановка, перчатка и тележка, слияние растений, удобрение,
+  молот, лопата, могилы, трофеи.
+- Здоровье и свойства растений: хост раз в секунду присылает свою расстановку и поправляет клиента.
+- Растение умирает по слову хоста.
+- Зомби (включая загипнотизированных), эффекты, звуки и общий запас солнца.
+
+## Ограничения версии 0.1
+
+- Анимации состояния растений (укус, свечение, сон) остаются локальными: это одна проигрываемая
+  анимация, и копирование её заморозило бы или задвоило картинку.
+- Снаряды и солнце, которые создаёт растение, живут на своей грядке; общий запас солнца
+  сходится к числу хоста.
+- Растение, которое на грядке клиента само дошло до нуля здоровья, стоит до тех пор,
+  пока хост не уберёт его своей расстановкой или не вылечит. Это выбранная модель
+  «слово хоста», а не потерянное сообщение.
+
+## Если что-то не работает
+
+- Проверьте, что у всех одинаковая версия `PvzMP.dll` (0.1) и одинаковый MelonLoader 0.7.3/net6.
+- Проверьте, что Radmin VPN у обоих в состоянии «подключено» и адрес введён без опечаток.
+- Разрешите игре доступ в брандмауэре Windows (частные сети) и порт 7777.
+- Логи лежат в `MelonLoader\Logs\`. В них есть строки `[mp]`, `[net]` и `[ui]` — по ним видно,
+  что комната и мод делают.
+
+## Для разработчика
 
 ```
 dotnet build -c Release
+dotnet test tests/PvzMP.NetTests/PvzMP.NetTests.csproj
 ```
 
-`GameDir` in `PvzMP.csproj` points at a local game install; the game's DLLs are referenced, never
-redistributed.
+`GameDir` в `PvzMP.csproj` указывает на локальную установку игры; DLL игры только используются
+для ссылок и не распространяются вместе с модом.
 
-Tests compile the mod's own protocol and session sources and run on loopback sockets:
+`ref/` хранит измеренные факты об игре (`EVIDENCE.md`, каждая запись с командой `Repro:`)
+и инструменты в `tools/re/`. Исходники игры в репозиторий не входят.
 
-```
-dotnet test tests/PvzMP.NetTests
-```
+## Лицензия
 
-## Research notes
-
-`ref/` holds the measured game facts (`EVIDENCE.md` entries, each with a `Repro:` command) and the
-reader tools in `tools/re/`. Decompiled game sources are not part of this repository.
-
-## License
-
-No license is granted yet. The repository is public for reading and testing; all rights reserved.
+Лицензия пока не выдана. Репозиторий открыт для чтения и тестирования; все права сохранены.

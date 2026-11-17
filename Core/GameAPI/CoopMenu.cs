@@ -28,15 +28,13 @@ namespace PvzMP.Core.GameAPI
 
         private const float CoopWidth = 240f;
         private const float CoopHeight = 64f;
-        private const float ChoiceWidth = 150f;
+        private const float ChoiceWidth = 200f;
 
-        /// <summary>The free strip between the survival entry and the button under it, and between two answers.</summary>
-        private const float Gap = 18f;
+        /// <summary>The free strip between two stacked answers.</summary>
         private const float ChoiceGap = 10f;
 
-        /// <summary>Where the button goes when the main menu's own survival entry cannot be read.</summary>
-        private const float FallbackMargin = 60f;
-        private const float FallbackBottomMargin = 90f;
+        /// <summary>The empty border the button keeps from the upper canvas's right and top edges.</summary>
+        private const float CornerMargin = 30f;
 
         private static readonly Color BoxColor = new Color(0.10f, 0.13f, 0.18f, 0.92f);
         private static readonly Color BoxHoverColor = new Color(0.20f, 0.30f, 0.45f, 0.96f);
@@ -70,9 +68,6 @@ namespace PvzMP.Core.GameAPI
         private static RectTransform _parent;
         private static Camera _camera;
         private static TMP_FontAsset _font;
-
-        /// <summary>Where the button stands on the upper canvas, in that canvas's local coordinates.</summary>
-        private static Vector2 _place;
 
         /// <summary>Run once per frame from the game's main thread.</summary>
         public static void Tick()
@@ -209,10 +204,8 @@ namespace PvzMP.Core.GameAPI
                 return false;
             }
 
-            bool anchored = FindPlace(top);
-
             _menuId = top.GetInstanceID();
-            _coop = AddBox(CoopText, _place, CoopWidth, CoopHeight);
+            _coop = AddBox(CoopText, CoopWidth, 0f);
             if (_coop == null)
             {
                 GiveUp("the game refused the coop button");
@@ -221,91 +214,20 @@ namespace PvzMP.Core.GameAPI
 
             _step = Step.Collapsed;
 
-            Log.Info("ui", "the coop button stands " + (anchored
-                    ? "under the main menu's survival entry"
-                    : "at the lower left of the screen")
-                + " at " + Mathf.RoundToInt(_place.x) + "," + Mathf.RoundToInt(_place.y)
+            Log.Info("ui", "the coop button stands at the upper right corner at "
+                + Mathf.RoundToInt(_coop.Rect.anchoredPosition.x) + ","
+                + Mathf.RoundToInt(_coop.Rect.anchoredPosition.y)
                 + " in the font '" + _font.name + "' " + ApiBase.FrameTag());
 
             return true;
-        }
-
-        /// <summary>
-        /// The survival entry is the last of the menu's mode buttons, so the free strip under it is the
-        /// one place the mod knows is clear. The entry's place is turned into the upper canvas's own
-        /// coordinates, so a camera canvas and an overlay canvas both land the same way.
-        /// </summary>
-        private static bool FindPlace(BaseMenu top)
-        {
-            _place = FallbackPlace();
-
-            MainMenu menu = ApiBase.Query("the main menu's own screen",
-                () => top.TryCast<MainMenu>(), Capability);
-            if (!ApiBase.Present(menu))
-            {
-                return false;
-            }
-
-            UIButton_mainMenu survival = ApiBase.Query("MainMenu.survivalLevel",
-                () => menu.survivalLevel, Capability);
-            if (!ApiBase.Present(survival))
-            {
-                return false;
-            }
-
-            RectTransform source = ApiBase.Query("the survival entry's rectangle", () =>
-            {
-                RectTransform box = survival.rectTransform;
-                return ApiBase.Present(box) ? box : survival.GetComponent<RectTransform>();
-            }, Capability);
-            if (!ApiBase.Present(source))
-            {
-                return false;
-            }
-
-            Vector2 screen = ApiBase.Query("the survival entry's place on the screen", () =>
-            {
-                Canvas part = source.GetComponentInParent<Canvas>();
-                Camera cam = ApiBase.Present(part) ? part.worldCamera : null;
-                Vector3 world = source.position;
-                return (Vector2) RectTransformUtility.WorldToScreenPoint(cam, world);
-            }, Capability);
-
-            Vector2 local = Vector2.zero;
-            bool mapped = ApiBase.Query("the survival entry's place on the upper canvas", () =>
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(_parent, screen, _camera,
-                    out local), Capability);
-            if (!mapped)
-            {
-                return false;
-            }
-
-            Rect rect = ApiBase.Query("the survival entry's size", () => source.rect, Capability);
-            Vector2 pivot = ApiBase.Query("the survival entry's pivot", () => source.pivot, Capability);
-
-            // The mapped point is the entry's pivot; the strip below is measured from its bottom edge.
-            Vector2 center = local + new Vector2((0.5f - pivot.x) * rect.width,
-                (0.5f - pivot.y) * rect.height);
-            _place = new Vector2(center.x, center.y - rect.height / 2f - Gap - CoopHeight / 2f);
-
-            return true;
-        }
-
-        private static Vector2 FallbackPlace()
-        {
-            Rect rect = ApiBase.Query("the upper canvas's rectangle", () => _parent.rect, Capability);
-
-            return new Vector2(rect.xMin + FallbackMargin + CoopWidth / 2f,
-                rect.yMin + FallbackBottomMargin + CoopHeight / 2f);
         }
 
         private static void ShowChoice()
         {
             DropBox(ref _coop);
 
-            float offset = (ChoiceWidth + ChoiceGap) / 2f;
-            _host = AddBox(HostText, _place + new Vector2(-offset, 0f), ChoiceWidth, CoopHeight);
-            _client = AddBox(ClientText, _place + new Vector2(offset, 0f), ChoiceWidth, CoopHeight);
+            _host = AddBox(HostText, ChoiceWidth, 0f);
+            _client = AddBox(ClientText, ChoiceWidth, CoopHeight + ChoiceGap);
 
             if (_host == null || _client == null)
             {
@@ -325,7 +247,7 @@ namespace PvzMP.Core.GameAPI
             DropBox(ref _client);
 
             _step = Step.Collapsed;
-            _coop = AddBox(CoopText, _place, CoopWidth, CoopHeight);
+            _coop = AddBox(CoopText, CoopWidth, 0f);
 
             if (_coop == null)
             {
@@ -333,7 +255,12 @@ namespace PvzMP.Core.GameAPI
             }
         }
 
-        private static Box AddBox(string text, Vector2 center, float width, float height)
+        /// <summary>
+        /// A drawn box anchored to the upper right corner of the upper canvas, with the game's own text
+        /// on top. The press is read by this class, not by the game's event system: a box that could be
+        /// hit would steal the click from whatever the menu has under it.
+        /// </summary>
+        private static Box AddBox(string text, float width, float topOffset)
         {
             GameObject holder = ApiBase.Call("new GameObject(PvzMP " + text + ")",
                 () => new GameObject("PvzMP " + text), Capability);
@@ -367,8 +294,6 @@ namespace PvzMP.Core.GameAPI
                 return null;
             }
 
-            Rect canvasRect = ApiBase.Query("the upper canvas's rectangle", () => _parent.rect,
-                Capability);
             RectTransform boxRect = ApiBase.Query(text + " box's rectangle",
                 () => image.rectTransform, Capability);
 
@@ -381,17 +306,15 @@ namespace PvzMP.Core.GameAPI
                     // its layer, so the canvas's own layer is the only right answer here.
                     holder.layer = _parent.gameObject.layer;
 
-                    boxRect.anchorMin = Vector2.zero;
-                    boxRect.anchorMax = Vector2.zero;
+                    boxRect.anchorMin = new Vector2(1f, 1f);
+                    boxRect.anchorMax = new Vector2(1f, 1f);
                     boxRect.pivot = new Vector2(0.5f, 0.5f);
-                    boxRect.sizeDelta = new Vector2(width, height);
-                    boxRect.anchoredPosition = new Vector2(center.x - canvasRect.xMin,
-                        center.y - canvasRect.yMin);
+                    boxRect.sizeDelta = new Vector2(width, CoopHeight);
+                    boxRect.anchoredPosition = new Vector2(
+                        -CornerMargin - width / 2f,
+                        -CornerMargin - topOffset - CoopHeight / 2f);
 
                     image.color = BoxColor;
-
-                    // The press is read by this class, not by the game's event system: a box that could
-                    // be hit would steal the click from whatever the menu has under it.
                     image.raycastTarget = false;
 
                     label.transform.SetParent(boxRect, false);
@@ -411,6 +334,8 @@ namespace PvzMP.Core.GameAPI
                     label.color = TextColor;
                     label.text = text;
                     label.raycastTarget = false;
+
+                    holder.transform.SetAsLastSibling();
                 }, Capability);
 
             if (!placed)
