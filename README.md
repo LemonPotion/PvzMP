@@ -1,4 +1,6 @@
-<img src="logo.png" width="420" alt="PvzMP logo">
+<p align="center">
+  <img src="logo.png" width="420" alt="PvzMP logo">
+</p>
 
 # PvzMP - co-op for Plants vs Zombies Fusion
 
