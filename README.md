@@ -1,3 +1,5 @@
+<img src="logo.png" width="420" alt="PvzMP logo">
+
 # PvzMP - co-op for Plants vs Zombies Fusion
 
 A mod that lets you play Plants vs Zombies Fusion with a friend (up to four people).
